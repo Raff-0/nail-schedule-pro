@@ -1,34 +1,36 @@
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'client' | 'manager';
+  created_at: string;
+}
+
 export interface Service {
   id: string;
   name: string;
-  duration: number; // minutes
+  duration: number;
   price: number;
-  category: "manicure" | "pedicure" | "nail-art" | "ricostruzione";
+  category: string;
   icon: string;
+  created_at: string;
 }
 
 export interface Booking {
   id: string;
-  userId: string;
-  userName: string;
-  serviceId: string;
-  serviceName: string;
+  user_id: string;
+  service_id: string;
   date: string;
   time: string;
-  duration: number;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-  price: number;
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  notes?: string;
+  created_at: string;
+  // Joined fields
+  profile?: Profile;
+  service?: Service;
 }
 
 export interface TimeSlot {
   time: string;
   available: boolean;
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: "client" | "manager";
-  avatar?: string;
 }

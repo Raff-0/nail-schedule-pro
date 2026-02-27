@@ -1,28 +1,44 @@
-import { motion } from "framer-motion";
-import { Plus, Calendar, LogOut, User } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Booking } from "@/types/nail-studio";
-import { format } from "date-fns";
-import { it } from "date-fns/locale";
-
-interface ClientHomeProps {
-  bookings: Booking[];
-  onNewBooking: () => void;
-}
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Plus, Calendar, LogOut, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMyBookings } from '@/hooks/useSupabase';
+import { Booking } from '@/types/nail-studio';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+import NewBookingPage from './NewBookingPage';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
-  confirmed: { label: "Confermato", className: "bg-success/10 text-success" },
-  pending: { label: "In attesa", className: "bg-warning/10 text-warning" },
-  cancelled: { label: "Annullato", className: "bg-destructive/10 text-destructive" },
-  completed: { label: "Completato", className: "bg-muted text-muted-foreground" },
+  confirmed: { label: 'Confermato', className: 'bg-success/10 text-success' },
+  pending: { label: 'In attesa', className: 'bg-warning/10 text-warning' },
+  cancelled: { label: 'Annullato', className: 'bg-destructive/10 text-destructive' },
+  completed: { label: 'Completato', className: 'bg-muted text-muted-foreground' },
 };
 
-const ClientHome = ({ bookings, onNewBooking }: ClientHomeProps) => {
-  const { user, logout } = useAuth();
+const ClientHome = () => {
+  const { profile, logout } = useAuth();
+  const { bookings, loading, refetch } = useMyBookings(profile?.id);
+  const [showNewBooking, setShowNewBooking] = useState(false);
+
+  if (showNewBooking) {
+    return (
+      <NewBookingPage
+        onBack={() => setShowNewBooking(false)}
+        onConfirm={() => {
+          setShowNewBooking(false);
+          refetch();
+        }}
+      />
+    );
+  }
 
   const upcoming = bookings
-    .filter((b) => b.status !== "cancelled" && b.status !== "completed")
+    .filter((b) => b.status !== 'cancelled' && b.status !== 'completed')
     .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
+
+  const past = bookings
+    .filter((b) => b.status === 'completed' || b.status === 'cancelled')
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background safe-top safe-bottom">
@@ -31,7 +47,7 @@ const ClientHome = ({ bookings, onNewBooking }: ClientHomeProps) => {
         <div>
           <p className="text-sm text-muted-foreground">Ciao,</p>
           <h1 className="text-xl font-display font-semibold text-foreground">
-            {user?.name?.split(" ")[0]} ✨
+            {profile?.name?.split(' ')[0]} ✨
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -48,7 +64,7 @@ const ClientHome = ({ bookings, onNewBooking }: ClientHomeProps) => {
       <div className="px-6 mb-6">
         <motion.button
           whileTap={{ scale: 0.98 }}
-          onClick={onNewBooking}
+          onClick={() => setShowNewBooking(true)}
           className="w-full p-5 rounded-2xl bg-gradient-hero text-primary-foreground shadow-elevated flex items-center gap-4"
         >
           <div className="h-12 w-12 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
@@ -61,49 +77,63 @@ const ClientHome = ({ bookings, onNewBooking }: ClientHomeProps) => {
         </motion.button>
       </div>
 
-      {/* Upcoming Bookings */}
+      {/* Upcoming */}
       <div className="px-6">
         <h2 className="text-lg font-display font-semibold text-foreground mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-primary" /> I tuoi appuntamenti
         </h2>
 
-        {upcoming.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-4xl mb-3">💅</p>
-            <p className="text-muted-foreground text-sm">Nessun appuntamento in programma</p>
-            <p className="text-muted-foreground text-xs mt-1">Prenota il tuo primo trattamento!</p>
+        {loading ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Caricamento...</p>
+        ) : upcoming.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            <p className="text-4xl mb-2">📅</p>
+            <p className="text-sm">Nessun appuntamento in programma</p>
+            <p className="text-xs mt-1">Prenotane uno nuovo!</p>
           </div>
         ) : (
-          <div className="space-y-3 pb-8">
-            {upcoming.map((booking, i) => {
-              const status = statusLabels[booking.status];
-              return (
-                <motion.div
-                  key={booking.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="p-4 rounded-2xl bg-card border border-border shadow-card"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <p className="font-semibold text-foreground">{booking.serviceName}</p>
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${status.className}`}>
-                      {status.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>
-                      📅 {format(new Date(booking.date), "d MMM", { locale: it })}
-                    </span>
-                    <span>🕐 {booking.time}</span>
-                    <span className="ml-auto font-semibold text-primary">€{booking.price}</span>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+          upcoming.map((booking) => (
+            <BookingCard key={booking.id} booking={booking} />
+          ))
+        )}
+
+        {past.length > 0 && (
+          <>
+            <h2 className="text-base font-display font-semibold text-muted-foreground mt-6 mb-3">
+              Storico
+            </h2>
+            {past.map((booking) => (
+              <BookingCard key={booking.id} booking={booking} />
+            ))}
+          </>
         )}
       </div>
+    </div>
+  );
+};
+
+const BookingCard = ({ booking }: { booking: Booking }) => {
+  const st = statusLabels[booking.status] ?? statusLabels.pending;
+  return (
+    <div className="bg-card rounded-2xl p-4 border border-border shadow-card mb-3">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="font-semibold text-sm text-foreground">
+            {booking.service?.icon} {booking.service?.name ?? '—'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {booking.service?.duration} min
+          </p>
+        </div>
+        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${st.className}`}>
+          {st.label}
+        </span>
+      </div>
+      <div className="flex gap-3 text-xs text-muted-foreground">
+        <span>📅 {format(new Date(booking.date), 'd MMM yyyy', { locale: it })}</span>
+        <span>🕙 {booking.time.slice(0, 5)}</span>
+      </div>
+      <p className="text-primary font-bold text-base mt-2">€{booking.service?.price}</p>
     </div>
   );
 };
