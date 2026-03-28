@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CalendarDays, Users, TrendingUp, Clock, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Users, TrendingUp, Clock, LogOut, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAllBookings, updateBookingStatus } from '@/hooks/useSupabase';
 import { Booking } from '@/types/nail-studio';
+import { MOCK_BOOKINGS, SERVICES } from '@/data/mock-data';
 import { format, addDays, subDays, isToday, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
+import ManagerNewBooking from './ManagerNewBooking';
 
 const statusColors: Record<string, string> = {
   confirmed: 'border-l-success',
