@@ -1,22 +1,26 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SERVICES, generateTimeSlots } from "@/data/mock-data";
 import { Service } from "@/types/nail-studio";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
 
-interface NewBookingPageProps {
+interface ManagerNewBookingProps {
   onBack: () => void;
-  onConfirm: (serviceId: string, date: string, time: string) => void;
+  onConfirm: (clientName: string, clientPhone: string, serviceId: string, date: string, time: string, notes?: string) => void;
 }
 
-const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [notes, setNotes] = useState("");
 
   const next30Days = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(new Date(), i);
@@ -37,12 +41,12 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-secondary transition-colors">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h1 className="text-lg font-display font-semibold text-foreground">Nuova Prenotazione</h1>
+        <h1 className="text-lg font-display font-semibold text-foreground">Nuovo Appuntamento</h1>
       </div>
 
       {/* Steps indicator */}
       <div className="px-6 py-3 flex gap-2">
-        {[1, 2, 3].map((s) => (
+        {[1, 2, 3, 4].map((s) => (
           <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-secondary"}`} />
         ))}
       </div>
@@ -53,16 +57,61 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
         animate={{ opacity: 1, x: 0 }}
         className="px-6 pt-2"
       >
-        {/* Step 1: Service */}
+        {/* Step 1: Client info */}
         {step === 1 && (
           <div>
+            <h2 className="text-xl font-display font-semibold mb-1">Dati cliente</h2>
+            <p className="text-sm text-muted-foreground mb-4">Non è richiesto un account</p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Nome cliente *</label>
+                <Input
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="es. Maria Rossi"
+                  className="rounded-xl h-12"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Telefono</label>
+                <Input
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  placeholder="es. 333 1234567"
+                  className="rounded-xl h-12"
+                  type="tel"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Note</label>
+                <Input
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Preferenze, allergie..."
+                  className="rounded-xl h-12"
+                />
+              </div>
+              <Button
+                onClick={() => setStep(2)}
+                disabled={!clientName.trim()}
+                className="w-full h-12 rounded-xl bg-gradient-hero text-primary-foreground font-semibold shadow-elevated hover:opacity-90 transition-opacity"
+              >
+                Avanti
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Service */}
+        {step === 2 && (
+          <div>
             <h2 className="text-xl font-display font-semibold mb-1">Scegli il servizio</h2>
-            <p className="text-sm text-muted-foreground mb-4">Cosa desideri fare oggi?</p>
+            <p className="text-sm text-muted-foreground mb-4">Per {clientName}</p>
             <div className="space-y-3">
               {SERVICES.map((service) => (
                 <button
                   key={service.id}
-                  onClick={() => { setSelectedService(service); setStep(2); }}
+                  onClick={() => { setSelectedService(service); setStep(3); }}
                   className={`w-full p-4 rounded-2xl border text-left transition-all shadow-card hover:shadow-elevated ${
                     selectedService?.id === service.id
                       ? "border-primary bg-rose-light"
@@ -87,14 +136,14 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
           </div>
         )}
 
-        {/* Step 2: Date */}
-        {step === 2 && (
+        {/* Step 3: Date & Time */}
+        {step === 3 && (
           <div>
-            <h2 className="text-xl font-display font-semibold mb-1">Scegli la data</h2>
+            <h2 className="text-xl font-display font-semibold mb-1">Scegli data e orario</h2>
             <p className="text-sm text-muted-foreground mb-4">
               {selectedService?.name} — {selectedService?.duration} min
             </p>
-            
+
             <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
               {next30Days.map((d) => (
                 <button
@@ -115,15 +164,13 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
 
             {selectedDate && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-                  <Calendar className="h-4 w-4" /> Orari disponibili
-                </h3>
+                <h3 className="text-sm font-medium text-foreground mb-3">Orari disponibili</h3>
                 <div className="grid grid-cols-4 gap-2">
                   {timeSlots.map((slot) => (
                     <button
                       key={slot.time}
                       disabled={!slot.available}
-                      onClick={() => { setSelectedTime(slot.time); setStep(3); }}
+                      onClick={() => { setSelectedTime(slot.time); setStep(4); }}
                       className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
                         selectedTime === slot.time
                           ? "bg-primary text-primary-foreground"
@@ -141,12 +188,24 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
           </div>
         )}
 
-        {/* Step 3: Confirm */}
-        {step === 3 && selectedService && (
+        {/* Step 4: Confirm */}
+        {step === 4 && selectedService && (
           <div>
-            <h2 className="text-xl font-display font-semibold mb-4">Conferma prenotazione</h2>
-            
+            <h2 className="text-xl font-display font-semibold mb-4">Conferma appuntamento</h2>
+
             <div className="bg-card rounded-2xl p-5 border border-border shadow-card space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">{clientName}</p>
+                  {clientPhone && <p className="text-xs text-muted-foreground">{clientPhone}</p>}
+                </div>
+              </div>
+
+              <div className="h-px bg-border" />
+
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{selectedService.icon}</span>
                 <div>
@@ -154,9 +213,9 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
                   <p className="text-sm text-muted-foreground">{selectedService.duration} minuti</p>
                 </div>
               </div>
-              
+
               <div className="h-px bg-border" />
-              
+
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Data</span>
                 <span className="font-medium text-foreground">
@@ -171,17 +230,26 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
                 <span className="text-muted-foreground">Prezzo</span>
                 <span className="font-semibold text-primary text-lg">€{selectedService.price}</span>
               </div>
+              {notes && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Note</span>
+                    <span className="font-medium text-foreground text-right max-w-[60%]">{notes}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <Button
-              onClick={() => onConfirm(selectedService.id, selectedDate, selectedTime)}
+              onClick={() => onConfirm(clientName, clientPhone, selectedService.id, selectedDate, selectedTime, notes)}
               className="w-full h-12 rounded-xl bg-gradient-hero text-primary-foreground font-semibold mt-6 shadow-elevated hover:opacity-90 transition-opacity"
             >
-              Conferma Prenotazione
+              Conferma Appuntamento
             </Button>
 
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(3)}
               className="w-full text-center mt-3 text-sm text-muted-foreground"
             >
               Modifica data/orario
@@ -193,4 +261,4 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
   );
 };
 
-export default NewBookingPage;
+export default ManagerNewBooking;
