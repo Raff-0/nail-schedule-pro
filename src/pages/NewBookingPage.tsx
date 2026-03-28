@@ -95,12 +95,12 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
               {selectedService?.name} — {selectedService?.duration} min
             </p>
             
-            <div className="grid grid-cols-4 gap-2 mb-6">
-              {next7Days.map((d) => (
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+              {next30Days.map((d) => (
                 <button
                   key={d.value}
                   onClick={() => { setSelectedDate(d.value); setSelectedTime(""); }}
-                  className={`p-3 rounded-2xl text-center transition-all ${
+                  className={`flex-shrink-0 w-16 p-3 rounded-2xl text-center transition-all ${
                     selectedDate === d.value
                       ? "bg-primary text-primary-foreground shadow-elevated"
                       : "bg-card border border-border"
