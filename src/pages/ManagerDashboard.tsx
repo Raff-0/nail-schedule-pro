@@ -22,9 +22,36 @@ const ManagerDashboard = () => {
   const { bookings, loading, refetch } = useAllBookings();
   const [view, setView] = useState<'dashboard' | 'agenda'>('dashboard');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showNewBooking, setShowNewBooking] = useState(false);
 
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const todayBookings = bookings.filter((b) => b.date === todayStr);
+  const handleManagerBooking = (clientName: string, clientPhone: string, serviceId: string, date: string, time: string, notes?: string) => {
+    // Add to mock bookings for demo
+    const newBooking: Booking = {
+      id: `mb-${Date.now()}`,
+      user_id: 'walk-in',
+      service_id: serviceId,
+      date,
+      time,
+      status: 'confirmed',
+      notes: `${clientName}${clientPhone ? ` • ${clientPhone}` : ''}${notes ? ` • ${notes}` : ''}`,
+      created_at: new Date().toISOString(),
+      service: SERVICES.find(s => s.id === serviceId),
+      profile: { id: 'walk-in', name: clientName, email: '', role: 'client', created_at: new Date().toISOString() },
+    };
+    MOCK_BOOKINGS.push(newBooking);
+    setShowNewBooking(false);
+    toast.success(`Appuntamento fissato per ${clientName} ✅`);
+    refetch();
+  };
+
+  if (showNewBooking) {
+    return (
+      <ManagerNewBooking
+        onBack={() => setShowNewBooking(false)}
+        onConfirm={handleManagerBooking}
+      />
+    );
+  }
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
   const todayRevenue = todayBookings
     .filter((b) => b.status === 'confirmed' || b.status === 'completed')
