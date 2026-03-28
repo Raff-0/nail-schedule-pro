@@ -248,6 +248,15 @@ const ManagerDashboard = () => {
           )}
         </motion.div>
       )}
+
+      {/* FAB - New Booking */}
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowNewBooking(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-hero text-primary-foreground shadow-elevated flex items-center justify-center z-50"
+      >
+        <Plus className="h-6 w-6" />
+      </motion.button>
     </div>
   );
 };
