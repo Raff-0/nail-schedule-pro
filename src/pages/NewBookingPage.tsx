@@ -18,7 +18,7 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
 
-  const next7Days = Array.from({ length: 7 }, (_, i) => {
+  const next30Days = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(new Date(), i);
     return {
       value: format(date, "yyyy-MM-dd"),
