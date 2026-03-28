@@ -24,7 +24,7 @@ const ClientHome = () => {
     return (
       <NewBookingPage
         onBack={() => setShowNewBooking(false)}
-        onConfirm={() => {
+        onConfirm={(_serviceId, _date, _time) => {
           setShowNewBooking(false);
           refetch();
         }}
