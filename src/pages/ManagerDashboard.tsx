@@ -52,6 +52,8 @@ const ManagerDashboard = () => {
       />
     );
   }
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayBookings = bookings.filter((b) => b.date === todayStr);
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
   const todayRevenue = todayBookings
     .filter((b) => b.status === 'confirmed' || b.status === 'completed')
