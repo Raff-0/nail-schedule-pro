@@ -1,12 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Profile } from '@/types/nail-studio';
 
 interface AuthContextType {
-  user: User | null;
+  user: { id: string; email: string } | null;
   profile: Profile | null;
-  session: Session | null;
+  session: object | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -16,59 +14,46 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// Mock profiles: use "manager@test.com" to login as manager, anything else is client
+const MANAGER_EMAIL = 'manager@test.com';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch profile from DB
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (!error && data) setProfile(data as Profile);
+  const buildProfile = (email: string, name: string): { user: { id: string; email: string }; profile: Profile } => {
+    const isManager = email.toLowerCase() === MANAGER_EMAIL;
+    const id = isManager ? 'manager-1' : 'client-1';
+    return {
+      user: { id, email },
+      profile: {
+        id,
+        name,
+        email,
+        role: isManager ? 'manager' : 'client',
+        created_at: new Date().toISOString(),
+      },
+    };
   };
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else setProfile(null);
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+  const login = async (email: string, _password: string) => {
+    // Simulate network delay
+    await new Promise((r) => setTimeout(r, 500));
+    const name = email.toLowerCase() === MANAGER_EMAIL ? 'Maria Gestrice' : 'Laura Bianchi';
+    const mock = buildProfile(email, name);
+    setUser(mock.user);
+    setProfile(mock.profile);
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name } },
-    });
-    if (error) throw error;
+  const register = async (email: string, _password: string, name: string) => {
+    await new Promise((r) => setTimeout(r, 500));
+    const mock = buildProfile(email, name);
+    setUser(mock.user);
+    setProfile(mock.profile);
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    setUser(null);
     setProfile(null);
   };
 
@@ -76,9 +61,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider value={{
       user,
       profile,
-      session,
+      session: user ? {} : null,
       isAuthenticated: !!user,
-      isLoading,
+      isLoading: false,
       login,
       register,
       logout,
