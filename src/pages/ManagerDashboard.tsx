@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CalendarDays, Users, TrendingUp, Clock, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Users, TrendingUp, Clock, LogOut, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAllBookings, updateBookingStatus } from '@/hooks/useSupabase';
+import { useAllBookings, updateBookingStatus, createBooking } from '@/hooks/useSupabase';
 import { Booking } from '@/types/nail-studio';
 import { format, addDays, subDays, isToday, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
+import ManagerNewBookingPage from './ManagerNewBookingPage';
 
 const statusColors: Record<string, string> = {
   confirmed: 'border-l-success',
@@ -20,6 +21,7 @@ const ManagerDashboard = () => {
   const { bookings, loading, refetch } = useAllBookings();
   const [view, setView] = useState<'dashboard' | 'agenda'>('dashboard');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showAddBooking, setShowAddBooking] = useState(false);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayBookings = bookings.filter((b) => b.date === todayStr);
@@ -47,6 +49,33 @@ const ManagerDashboard = () => {
       refetch();
     }
   };
+
+  const handleManagerBookingConfirm = async (
+    clientId: string | null,
+    serviceId: string,
+    date: string,
+    time: string,
+    guestName?: string,
+    guestPhone?: string
+  ) => {
+    const { error } = await createBooking(clientId, serviceId, date, time, undefined, 'confirmed', guestName, guestPhone);
+    if (error) {
+      toast.error('Errore durante la creazione dell\'appuntamento');
+    } else {
+      toast.success('Appuntamento creato! ✅');
+      setShowAddBooking(false);
+      refetch();
+    }
+  };
+
+  if (showAddBooking) {
+    return (
+      <ManagerNewBookingPage
+        onBack={() => setShowAddBooking(false)}
+        onConfirm={handleManagerBookingConfirm}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background safe-top safe-bottom">
@@ -115,7 +144,9 @@ const ManagerDashboard = () => {
                 <div key={booking.id} className="p-4 rounded-2xl bg-card border border-border shadow-card">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <p className="font-semibold text-foreground text-sm">{booking.profile?.name}</p>
+                      <p className="font-semibold text-foreground text-sm">
+                        {booking.profile?.name ?? booking.guest_name ?? '—'}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {booking.service?.icon} {booking.service?.name}
                       </p>
@@ -155,9 +186,18 @@ const ManagerDashboard = () => {
             <span className="text-sm font-medium text-foreground capitalize">
               {format(selectedDate, 'MMMM yyyy', { locale: it })}
             </span>
-            <button onClick={() => setSelectedDate(addDays(selectedDate, 7))} className="p-2 rounded-xl hover:bg-secondary">
-              <ChevronRight className="h-4 w-4 text-foreground" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowAddBooking(true)}
+                className="p-2 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                title="Aggiungi appuntamento"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button onClick={() => setSelectedDate(addDays(selectedDate, 7))} className="p-2 rounded-xl hover:bg-secondary">
+                <ChevronRight className="h-4 w-4 text-foreground" />
+              </button>
+            </div>
           </div>
 
           <div className="flex gap-1 mb-6">
@@ -200,7 +240,12 @@ const ManagerDashboard = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-semibold text-foreground text-sm">{booking.time.slice(0, 5)}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{booking.profile?.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {booking.profile?.name ?? booking.guest_name ?? '—'}
+                        {booking.guest_phone && (
+                          <span className="ml-1 text-muted-foreground/70">· {booking.guest_phone}</span>
+                        )}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-foreground">

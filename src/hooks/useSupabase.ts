@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Booking, Service, TimeSlot } from '@/types/nail-studio';
+import { Booking, Profile, Service, TimeSlot } from '@/types/nail-studio';
 
 // ─── SERVICES ───────────────────────────────────────────────
 export const useServices = () => {
@@ -63,13 +63,36 @@ export const useAllBookings = () => {
   return { bookings, loading, refetch: fetch };
 };
 
+// ─── PROFILES (all clients) ──────────────────────────────────
+export const useAllProfiles = () => {
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'client')
+      .order('name')
+      .then(({ data }) => {
+        if (data) setProfiles(data as Profile[]);
+        setLoading(false);
+      });
+  }, []);
+
+  return { profiles, loading };
+};
+
 // ─── CREATE BOOKING ──────────────────────────────────────────
 export const createBooking = async (
-  userId: string,
+  userId: string | null,
   serviceId: string,
   date: string,
   time: string,
-  notes?: string
+  notes?: string,
+  status: Booking['status'] = 'pending',
+  guestName?: string,
+  guestPhone?: string
 ): Promise<{ error: string | null }> => {
   const { error } = await supabase.from('bookings').insert({
     user_id: userId,
@@ -77,7 +100,9 @@ export const createBooking = async (
     date,
     time,
     notes,
-    status: 'pending',
+    status,
+    ...(guestName ? { guest_name: guestName } : {}),
+    ...(guestPhone ? { guest_phone: guestPhone } : {}),
   });
   return { error: error?.message ?? null };
 };

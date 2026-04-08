@@ -18,12 +18,14 @@ export interface Service {
 
 export interface Booking {
   id: string;
-  user_id: string;
+  user_id: string | null;
   service_id: string;
   date: string;
   time: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   notes?: string;
+  guest_name?: string;
+  guest_phone?: string;
   created_at: string;
   // Joined fields
   profile?: Profile;
