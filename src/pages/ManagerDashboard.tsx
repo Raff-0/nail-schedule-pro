@@ -4,10 +4,15 @@ import { CalendarDays, Users, TrendingUp, Clock, LogOut, ChevronLeft, ChevronRig
 import { useAuth } from '@/contexts/AuthContext';
 import { useAllBookings, updateBookingStatus, createBooking } from '@/hooks/useSupabase';
 import { Booking } from '@/types/nail-studio';
+import { MOCK_BOOKINGS, SERVICES } from '@/data/mock-data';
 import { format, addDays, subDays, isToday, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
+<<<<<<< HEAD
 import ManagerNewBookingPage from './ManagerNewBookingPage';
+=======
+import ManagerNewBooking from './ManagerNewBooking';
+>>>>>>> 7890c82c8697bc87c6581c391a9318427d6371d6
 
 const statusColors: Record<string, string> = {
   confirmed: 'border-l-success',
@@ -21,8 +26,40 @@ const ManagerDashboard = () => {
   const { bookings, loading, refetch } = useAllBookings();
   const [view, setView] = useState<'dashboard' | 'agenda'>('dashboard');
   const [selectedDate, setSelectedDate] = useState(new Date());
+<<<<<<< HEAD
   const [showAddBooking, setShowAddBooking] = useState(false);
+=======
+  const [showNewBooking, setShowNewBooking] = useState(false);
+>>>>>>> 7890c82c8697bc87c6581c391a9318427d6371d6
 
+  const handleManagerBooking = (clientName: string, clientPhone: string, serviceId: string, date: string, time: string, notes?: string) => {
+    // Add to mock bookings for demo
+    const newBooking: Booking = {
+      id: `mb-${Date.now()}`,
+      user_id: 'walk-in',
+      service_id: serviceId,
+      date,
+      time,
+      status: 'confirmed',
+      notes: `${clientName}${clientPhone ? ` • ${clientPhone}` : ''}${notes ? ` • ${notes}` : ''}`,
+      created_at: new Date().toISOString(),
+      service: SERVICES.find(s => s.id === serviceId),
+      profile: { id: 'walk-in', name: clientName, email: '', role: 'client', created_at: new Date().toISOString() },
+    };
+    MOCK_BOOKINGS.push(newBooking);
+    setShowNewBooking(false);
+    toast.success(`Appuntamento fissato per ${clientName} ✅`);
+    refetch();
+  };
+
+  if (showNewBooking) {
+    return (
+      <ManagerNewBooking
+        onBack={() => setShowNewBooking(false)}
+        onConfirm={handleManagerBooking}
+      />
+    );
+  }
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todayBookings = bookings.filter((b) => b.date === todayStr);
   const pendingBookings = bookings.filter((b) => b.status === 'pending');
@@ -262,6 +299,15 @@ const ManagerDashboard = () => {
           )}
         </motion.div>
       )}
+
+      {/* FAB - New Booking */}
+      <motion.button
+        whileTap={{ scale: 0.9 }}
+        onClick={() => setShowNewBooking(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-hero text-primary-foreground shadow-elevated flex items-center justify-center z-50"
+      >
+        <Plus className="h-6 w-6" />
+      </motion.button>
     </div>
   );
 };
