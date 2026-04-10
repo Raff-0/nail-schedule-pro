@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SERVICES, generateTimeSlots } from "@/data/mock-data";
+import { useServices, useTimeSlots } from "@/hooks/useSupabase";
 import { Service } from "@/types/nail-studio";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
@@ -18,6 +18,9 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
 
+  const { services, loading: loadingServices } = useServices();
+  const { slots: timeSlots, loading: loadingSlots } = useTimeSlots(selectedDate);
+
   const next30Days = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(new Date(), i);
     return {
@@ -27,8 +30,6 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
       month: format(date, "MMM", { locale: it }),
     };
   });
-
-  const timeSlots = selectedDate ? generateTimeSlots(selectedDate) : [];
 
   return (
     <div className="min-h-screen bg-background safe-top safe-bottom">
@@ -58,8 +59,11 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
           <div>
             <h2 className="text-xl font-display font-semibold mb-1">Scegli il servizio</h2>
             <p className="text-sm text-muted-foreground mb-4">Cosa desideri fare oggi?</p>
+            {loadingServices ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Caricamento servizi...</p>
+            ) : (
             <div className="space-y-3">
-              {SERVICES.map((service) => (
+              {services.map((service) => (
                 <button
                   key={service.id}
                   onClick={() => { setSelectedService(service); setStep(2); }}
@@ -84,6 +88,7 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
                 </button>
               ))}
             </div>
+            )}
           </div>
         )}
 
@@ -115,11 +120,15 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
 
             {selectedDate && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-                  <Calendar className="h-4 w-4" /> Orari disponibili
-                </h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {timeSlots.map((slot) => (
+                {loadingSlots ? (
+                  <p className="text-sm text-muted-foreground">Caricamento orari disponibili...</p>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" /> Orari disponibili
+                    </h3>
+                    <div className="grid grid-cols-4 gap-2">
+                      {timeSlots.map((slot) => (
                     <button
                       key={slot.time}
                       disabled={!slot.available}
@@ -135,7 +144,9 @@ const NewBookingPage = ({ onBack, onConfirm }: NewBookingPageProps) => {
                       {slot.time}
                     </button>
                   ))}
-                </div>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </div>

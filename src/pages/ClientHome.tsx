@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Calendar, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMyBookings } from '@/hooks/useSupabase';
+import { useMyBookings, createBooking } from '@/hooks/useSupabase';
 import { Booking } from '@/types/nail-studio';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { toast } from 'sonner';
 import NewBookingPage from './NewBookingPage';
 
 const statusLabels: Record<string, { label: string; className: string }> = {
@@ -24,9 +25,15 @@ const ClientHome = () => {
     return (
       <NewBookingPage
         onBack={() => setShowNewBooking(false)}
-        onConfirm={(_serviceId, _date, _time) => {
-          setShowNewBooking(false);
-          refetch();
+        onConfirm={async (serviceId: string, date: string, time: string) => {
+          const { error } = await createBooking(profile?.id ?? null, serviceId, date, time, undefined, 'pending');
+          if (error) {
+            toast.error(`Errore: ${error}`);
+          } else {
+            toast.success('Prenotazione creata! ✅');
+            setShowNewBooking(false);
+            refetch();
+          }
         }}
       />
     );

@@ -1,26 +1,48 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+
+const PHONE_PREFIXES = [
+  { value: '+39', label: 'Italia (+39)' },
+  { value: '+41', label: 'Svizzera (+41)' },
+  { value: '+33', label: 'Francia (+33)' },
+  { value: '+49', label: 'Germania (+49)' },
+  { value: '+34', label: 'Spagna (+34)' },
+  { value: '+44', label: 'Regno Unito (+44)' },
+  { value: '+1', label: 'USA/Canada (+1)' },
+];
 
 const LoginPage = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [phonePrefix, setPhonePrefix] = useState('+39');
+  const [phoneLocal, setPhoneLocal] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
+
+  const fullPhone = `${phonePrefix}${phoneLocal.replace(/\D/g, '')}`;
+  const parsedPhone = parsePhoneNumberFromString(fullPhone);
+  const isPhoneValid = isRegister ? isValidPhoneNumber(fullPhone) : true;
+  const phonePreview = parsedPhone?.formatInternational() ?? fullPhone;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (isRegister) {
-        await register(email, password, name);
+        if (!isPhoneValid) {
+          throw new Error('Inserisci un numero di telefono valido');
+        }
+        await register(email, password, name, parsedPhone?.number ?? fullPhone);
         toast.success('Account creato! Benvenuta 🎉');
       } else {
         await login(email, password);
@@ -64,16 +86,49 @@ const LoginPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {isRegister && (
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Il tuo nome"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="pl-10 h-12 rounded-xl"
-                required
-              />
-            </div>
+            <>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Il tuo nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="pl-10 h-12 rounded-xl"
+                  required
+                />
+              </div>
+              <div className="relative">
+                <label className="text-xs text-muted-foreground mb-1 block">Telefono</label>
+                <div className="grid grid-cols-[140px_1fr] gap-2">
+                  <Select value={phonePrefix} onValueChange={setPhonePrefix}>
+                    <SelectTrigger className="h-12 rounded-xl">
+                      <SelectValue placeholder="Prefisso" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PHONE_PREFIXES.map((prefix) => (
+                        <SelectItem key={prefix.value} value={prefix.value}>
+                          {prefix.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="Es. 3471234567"
+                    value={phoneLocal}
+                    onChange={(e) => setPhoneLocal(e.target.value.replace(/[^\d\s-]/g, ''))}
+                    className="h-12 rounded-xl"
+                    required
+                  />
+                </div>
+                {phoneLocal.trim().length > 0 && (
+                  <p className={`mt-1 text-xs ${isPhoneValid ? 'text-success' : 'text-destructive'}`}>
+                    {isPhoneValid ? `Numero valido: ${phonePreview}` : 'Numero non valido per il prefisso selezionato'}
+                  </p>
+                )}
+              </div>
+            </>
           )}
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -107,7 +162,7 @@ const LoginPage = () => {
 
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || (isRegister && !isPhoneValid)}
             className="w-full h-12 rounded-xl bg-gradient-hero text-primary-foreground font-semibold text-base shadow-elevated hover:opacity-90 transition-opacity"
           >
             {loading ? 'Caricamento...' : isRegister ? 'Registrati' : 'Accedi'}

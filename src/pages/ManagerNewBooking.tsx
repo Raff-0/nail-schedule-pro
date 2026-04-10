@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Clock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SERVICES, generateTimeSlots } from "@/data/mock-data";
+import { useServices, useTimeSlots } from "@/hooks/useSupabase";
 import { Service } from "@/types/nail-studio";
 import { format, addDays } from "date-fns";
 import { it } from "date-fns/locale";
@@ -22,6 +22,9 @@ const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
   const [selectedTime, setSelectedTime] = useState("");
   const [notes, setNotes] = useState("");
 
+  const { services, loading: loadingServices } = useServices();
+  const { slots: timeSlots, loading: loadingSlots } = useTimeSlots(selectedDate);
+
   const next30Days = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(new Date(), i);
     return {
@@ -31,8 +34,6 @@ const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
       month: format(date, "MMM", { locale: it }),
     };
   });
-
-  const timeSlots = selectedDate ? generateTimeSlots(selectedDate) : [];
 
   return (
     <div className="min-h-screen bg-background safe-top safe-bottom">
@@ -107,8 +108,11 @@ const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
           <div>
             <h2 className="text-xl font-display font-semibold mb-1">Scegli il servizio</h2>
             <p className="text-sm text-muted-foreground mb-4">Per {clientName}</p>
+            {loadingServices ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Caricamento servizi...</p>
+            ) : (
             <div className="space-y-3">
-              {SERVICES.map((service) => (
+              {services.map((service) => (
                 <button
                   key={service.id}
                   onClick={() => { setSelectedService(service); setStep(3); }}
@@ -133,6 +137,7 @@ const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
                 </button>
               ))}
             </div>
+            )}
           </div>
         )}
 
@@ -164,9 +169,13 @@ const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
 
             {selectedDate && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h3 className="text-sm font-medium text-foreground mb-3">Orari disponibili</h3>
-                <div className="grid grid-cols-4 gap-2">
-                  {timeSlots.map((slot) => (
+                {loadingSlots ? (
+                  <p className="text-sm text-muted-foreground">Caricamento orari disponibili...</p>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-medium text-foreground mb-3">Orari disponibili</h3>
+                    <div className="grid grid-cols-4 gap-2">
+                      {timeSlots.map((slot) => (
                     <button
                       key={slot.time}
                       disabled={!slot.available}
@@ -182,7 +191,9 @@ const ManagerNewBooking = ({ onBack, onConfirm }: ManagerNewBookingProps) => {
                       {slot.time}
                     </button>
                   ))}
-                </div>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </div>

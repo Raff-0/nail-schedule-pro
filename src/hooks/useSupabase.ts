@@ -72,7 +72,7 @@ export const useAllProfiles = () => {
     supabase
       .from('profiles')
       .select('*')
-      .eq('role', 'client')
+      .eq('role', 'costumer')
       .order('name')
       .then(({ data }) => {
         if (data) setProfiles(data as Profile[]);
@@ -82,6 +82,9 @@ export const useAllProfiles = () => {
 
   return { profiles, loading };
 };
+
+// UUID del profilo ospite fisso (per prenotazioni senza account)
+const GUEST_PROFILE_ID = '00000000-0000-0000-0000-000000000001';
 
 // ─── CREATE BOOKING ──────────────────────────────────────────
 export const createBooking = async (
@@ -94,16 +97,20 @@ export const createBooking = async (
   guestName?: string,
   guestPhone?: string
 ): Promise<{ error: string | null }> => {
-  const { error } = await supabase.from('bookings').insert({
-    user_id: userId,
+  // Always format time as HH:MM:00 (seconds constraint = 0)
+  const timeWithSeconds = time.length === 5 ? `${time}:00` : time;
+  
+  const payload: Record<string, unknown> = {
+    user_id: userId ?? GUEST_PROFILE_ID,
     service_id: serviceId,
     date,
-    time,
-    notes,
+    time: timeWithSeconds,
     status,
+    ...(notes ? { notes } : {}),
     ...(guestName ? { guest_name: guestName } : {}),
     ...(guestPhone ? { guest_phone: guestPhone } : {}),
-  });
+  };
+  const { error } = await supabase.from('bookings').insert(payload);
   return { error: error?.message ?? null };
 };
 
