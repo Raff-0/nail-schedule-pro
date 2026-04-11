@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nail Studio</string>
+    <string name="title_activity_main">Nail Studio</string>
+    <string name="package_name">app.lovable.cebf9c14158a47ef9e317ef91766047a</string>
+    <string name="custom_url_scheme">app.lovable.cebf9c14158a47ef9e317ef91766047a</string>
+</resources>
