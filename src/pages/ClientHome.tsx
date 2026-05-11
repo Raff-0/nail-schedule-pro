@@ -73,7 +73,9 @@ const ClientHome = () => {
   const [showNewBooking, setShowNewBooking] = useState(false);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeSlide, setActiveSlide] = useState(0);
+  const [isAutoPlayActive, setIsAutoPlayActive] = useState(true);
 
+  // Track carousel selection updates
   useEffect(() => {
     if (!carouselApi) {
       return;
@@ -92,6 +94,35 @@ const ClientHome = () => {
       carouselApi.off('reInit', onSelect);
     };
   }, [carouselApi]);
+
+  // Auto-rotate carousel every 3 seconds
+  useEffect(() => {
+    if (!carouselApi || !isAutoPlayActive) {
+      return;
+    }
+
+    const autoPlayInterval = setInterval(() => {
+      carouselApi.scrollNext();
+    }, 3000);
+
+    // Pause autoplay on user interaction
+    const onPointerDown = () => {
+      setIsAutoPlayActive(false);
+    };
+
+    const onPointerUp = () => {
+      setIsAutoPlayActive(true);
+    };
+
+    carouselApi.on('pointerDown', onPointerDown);
+    carouselApi.on('pointerUp', onPointerUp);
+
+    return () => {
+      clearInterval(autoPlayInterval);
+      carouselApi.off('pointerDown', onPointerDown);
+      carouselApi.off('pointerUp', onPointerUp);
+    };
+  }, [carouselApi, isAutoPlayActive]);
 
   if (showNewBooking) {
     return (
