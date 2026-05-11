@@ -22,6 +22,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const SESSION_TIMEOUT_MS = 7000;
+  const PROFILE_TIMEOUT_MS = 7000;
+
   const toAuthUser = (authUser: User | null) => {
     if (!authUser) return null;
     return { id: authUser.id, email: authUser.email ?? '' };
@@ -79,30 +82,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return (inserted as Profile) ?? createdProfile;
   };
 
+  const loadProfileWithTimeout = async (authUser: User | null): Promise<Profile | null> => {
+    if (!authUser) return null;
+
+    const profileTimeout = new Promise<Profile>((resolve) => {
+      setTimeout(() => resolve(fallbackProfile(authUser)), PROFILE_TIMEOUT_MS);
+    });
+
+    return Promise.race([loadProfile(authUser), profileTimeout]);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     const bootstrap = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      const nextSession = data.session;
-      const authUser = nextSession?.user ?? null;
-
-      if (isMounted) {
-        setSession(nextSession);
-        setUser(toAuthUser(authUser));
-      }
-
       try {
-        const nextProfile = await loadProfile(authUser);
+        const sessionTimeout = new Promise<{ data: { session: null }; error: null }>((resolve) => {
+          setTimeout(() => resolve({ data: { session: null }, error: null }), SESSION_TIMEOUT_MS);
+        });
+
+        const { data, error } = await Promise.race([supabase.auth.getSession(), sessionTimeout]);
+
+        if (error) {
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const nextSession = data.session;
+        const authUser = nextSession?.user ?? null;
+
+        if (isMounted) {
+          setSession(nextSession);
+          setUser(toAuthUser(authUser));
+        }
+
+        const nextProfile = await loadProfileWithTimeout(authUser);
         if (isMounted) {
           setProfile(nextProfile);
+        }
+      } catch {
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
         }
       } finally {
         if (isMounted) {
@@ -126,8 +150,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setIsLoading(true);
       try {
-        const nextProfile = await loadProfile(authUser);
+        const nextProfile = await loadProfileWithTimeout(authUser);
         setProfile(nextProfile);
+      } catch {
+        setProfile(fallbackProfile(authUser));
       } finally {
         setIsLoading(false);
       }
