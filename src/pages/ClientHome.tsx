@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Calendar, LogOut, User } from 'lucide-react';
+import { Plus, Calendar, LogOut, Minus, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMyBookings, createBooking } from '@/hooks/useSupabase';
 import { Booking } from '@/types/nail-studio';
@@ -8,6 +8,14 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
 import NewBookingPage from './NewBookingPage';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Carousel,
   CarouselApi,
@@ -24,46 +32,66 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: 'Completato', className: 'bg-muted text-muted-foreground' },
 };
 
-const productSlides = [
+type ProductSlide = {
+  id: number;
+  title: string;
+  subtitle: string;
+  description: string;
+  price: string;
+  image: string;
+  benefits: string[];
+};
+
+const productSlides: ProductSlide[] = [
   {
     id: 1,
     title: 'Kit Glow Builder Gel',
     subtitle: 'Finish brillante e lunga tenuta',
+    description: 'Kit professionale con base, builder e finish per una ricostruzione resistente e luminosa.',
     price: '€29',
     image:
       'https://images.unsplash.com/photo-1610992235823-f167d7ee0d56?auto=format&fit=crop&w=1200&q=80',
+    benefits: ['Tenuta fino a 3 settimane', 'Effetto gloss intenso', 'Ideale per refill rapidi'],
   },
   {
     id: 2,
     title: 'Polish Velvet Rose',
     subtitle: 'Colore intenso con effetto seta',
+    description: 'Smalto semipermanente dal tono rosato elegante, perfetto per look quotidiani o cerimonie.',
     price: '€16',
     image:
       'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
+    benefits: ['Asciugatura UV/LED rapida', 'Coprenza alta alla prima passata', 'Tonalita elegante e versatile'],
   },
   {
     id: 3,
     title: 'Nail Care Serum Pro',
     subtitle: 'Nutriente quotidiano per unghie forti',
+    description: 'Siero rinforzante con complesso vitaminico pensato per ridurre fragilita e sfaldamento.',
     price: '€22',
     image:
       'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=1200&q=80',
+    benefits: ['Formula leggera non untuosa', 'Azione rinforzante progressiva', 'Uso quotidiano semplice'],
   },
   {
     id: 4,
     title: 'Top Coat Mirror',
     subtitle: 'Protezione extra con effetto specchio',
+    description: 'Top coat sigillante ultra brillante che protegge il colore da graffi e opacizzazione.',
     price: '€14',
     image:
       'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=1200&q=80',
+    benefits: ['Brillantezza immediata', 'Barriera anti-graffio', 'Compatibile con semipermanente'],
   },
   {
     id: 5,
     title: 'Set Lime Precision',
     subtitle: 'Sagomatura precisa e delicata',
+    description: 'Set completo di lime professionali con diverse grane per definizione e finitura.',
     price: '€18',
     image:
       'https://images.unsplash.com/photo-1617897903246-719242758050?auto=format&fit=crop&w=1200&q=80',
+    benefits: ['3 grane complementari', 'Riduce le rotture', 'Maneggevolezza professionale'],
   },
 ];
 
@@ -75,6 +103,44 @@ const ClientHome = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [isAutoPlayActive, setIsAutoPlayActive] = useState(true);
   const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+  const [selectedProduct, setSelectedProduct] = useState<ProductSlide | null>(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
+  const [isOrdering, setIsOrdering] = useState(false);
+
+  const openProductDetail = (product: ProductSlide) => {
+    setSelectedProduct(product);
+    setOrderQuantity(1);
+    setIsAutoPlayActive(false);
+  };
+
+  const closeProductDetail = (open: boolean) => {
+    if (!open) {
+      setSelectedProduct(null);
+      setIsAutoPlayActive(true);
+    }
+  };
+
+  const getProductTotal = (price: string, quantity: number) => {
+    const parsedPrice = Number(price.replace('€', '').trim());
+    return `€${(parsedPrice * quantity).toFixed(2).replace('.00', '')}`;
+  };
+
+  const handleProductOrder = async () => {
+    if (!selectedProduct) {
+      return;
+    }
+
+    setIsOrdering(true);
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 600);
+    });
+
+    toast.success(`Ordine inviato: ${selectedProduct.title} x${orderQuantity}`);
+    setIsOrdering(false);
+    setSelectedProduct(null);
+    setIsAutoPlayActive(true);
+  };
 
   // Track carousel selection updates
   useEffect(() => {
@@ -259,7 +325,16 @@ const ClientHome = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.35 }}
                     transition={{ duration: 0.35, delay: index * 0.05 }}
-                    className="relative overflow-hidden rounded-3xl border border-border shadow-card"
+                    className="relative overflow-hidden rounded-3xl border border-border shadow-card cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openProductDetail(product)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openProductDetail(product);
+                      }
+                    }}
                   >
                     <div className="h-48 w-full bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/20 flex items-center justify-center">
                       {!failedImages.has(product.id) ? (
@@ -285,6 +360,7 @@ const ClientHome = () => {
                         <div>
                           <p className="text-base font-semibold leading-tight">{product.title}</p>
                           <p className="text-xs text-white/85 mt-1">{product.subtitle}</p>
+                          <p className="text-[11px] text-white/75 mt-2">Tocca per dettagli e ordine</p>
                         </div>
                         <span className="shrink-0 rounded-full bg-white/20 backdrop-blur px-3 py-1 text-sm font-semibold">
                           {product.price}
@@ -312,6 +388,106 @@ const ClientHome = () => {
               />
             ))}
           </div>
+
+          <Dialog open={!!selectedProduct} onOpenChange={closeProductDetail}>
+            <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+              {selectedProduct && (
+                <>
+                  <div className="relative h-52">
+                    {!failedImages.has(selectedProduct.id) ? (
+                      <img
+                        src={selectedProduct.image}
+                        alt={selectedProduct.title}
+                        className="h-full w-full object-cover"
+                        onError={() => {
+                          setFailedImages((prev) => new Set([...prev, selectedProduct.id]));
+                        }}
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/20 flex items-center justify-center">
+                        <div className="text-center">
+                          <p className="text-5xl mb-2">💅</p>
+                          <p className="text-sm text-muted-foreground">{selectedProduct.title}</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white">
+                      <p className="text-sm font-medium">Prodotto consigliato</p>
+                      <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-semibold">
+                        {selectedProduct.price}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 pt-4">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl">{selectedProduct.title}</DialogTitle>
+                      <DialogDescription className="text-sm">
+                        {selectedProduct.subtitle}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <p className="text-sm text-foreground/90 mt-3">{selectedProduct.description}</p>
+
+                    <ul className="mt-4 space-y-1.5">
+                      {selectedProduct.benefits.map((benefit) => (
+                        <li key={benefit} className="text-sm text-muted-foreground">
+                          • {benefit}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="mt-5 rounded-xl border border-border bg-muted/30 p-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Quantita</p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="h-8 w-8 rounded-lg border border-border bg-background text-foreground disabled:opacity-40"
+                            onClick={() => setOrderQuantity((current) => Math.max(1, current - 1))}
+                            disabled={orderQuantity === 1 || isOrdering}
+                            aria-label="Riduci quantita"
+                          >
+                            <Minus className="h-4 w-4 mx-auto" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-semibold">{orderQuantity}</span>
+                          <button
+                            type="button"
+                            className="h-8 w-8 rounded-lg border border-border bg-background text-foreground disabled:opacity-40"
+                            onClick={() => setOrderQuantity((current) => Math.min(20, current + 1))}
+                            disabled={orderQuantity === 20 || isOrdering}
+                            aria-label="Aumenta quantita"
+                          >
+                            <Plus className="h-4 w-4 mx-auto" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                        <p className="text-sm text-muted-foreground">Totale</p>
+                        <p className="text-base font-semibold text-primary">
+                          {getProductTotal(selectedProduct.price, orderQuantity)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="mt-5">
+                      <button
+                        type="button"
+                        className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium inline-flex items-center justify-center gap-2 disabled:opacity-60"
+                        onClick={handleProductOrder}
+                        disabled={isOrdering}
+                      >
+                        <ShoppingBag className="h-4 w-4" />
+                        {isOrdering ? 'Invio ordine...' : 'Ordina ora'}
+                      </button>
+                    </DialogFooter>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
         </section>
       </div>
     </div>
