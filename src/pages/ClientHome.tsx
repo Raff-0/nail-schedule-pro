@@ -74,6 +74,7 @@ const ClientHome = () => {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isAutoPlayActive, setIsAutoPlayActive] = useState(true);
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
 
   // Track carousel selection updates
   useEffect(() => {
@@ -260,12 +261,24 @@ const ClientHome = () => {
                     transition={{ duration: 0.35, delay: index * 0.05 }}
                     className="relative overflow-hidden rounded-3xl border border-border shadow-card"
                   >
-                    <img
-                      src={product.image}
-                      alt={product.title}
-                      className="h-48 w-full object-cover"
-                      loading="lazy"
-                    />
+                    <div className="h-48 w-full bg-gradient-to-br from-primary/20 via-primary/10 to-secondary/20 flex items-center justify-center">
+                      {!failedImages.has(product.id) ? (
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          className="h-48 w-full object-cover"
+                          loading="lazy"
+                          onError={() => {
+                            setFailedImages((prev) => new Set([...prev, product.id]));
+                          }}
+                        />
+                      ) : (
+                        <div className="text-center">
+                          <p className="text-4xl mb-2">💅</p>
+                          <p className="text-xs text-muted-foreground">{product.title}</p>
+                        </div>
+                      )}
+                    </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
                       <div className="flex items-center justify-between gap-3">
