@@ -155,7 +155,6 @@ const ClientHome = () => {
       {/* Header */}
       <div className="px-6 pt-6 pb-4 flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">Ciao,</p>
           <h1 className="text-xl font-display font-semibold text-foreground">
             {profile?.name?.split(' ')[0]} ✨
           </h1>
